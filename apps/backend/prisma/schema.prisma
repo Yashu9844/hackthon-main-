@@ -24,7 +24,6 @@ model User {
   updatedAt     DateTime     @default(now()) @updatedAt
   sessions      Session[]
   accounts      Account[]
-  credentials   Credential[]
 
   members     Member[]
   invitations Invitation[]
@@ -78,30 +77,6 @@ model Verification {
   updatedAt  DateTime @default(now()) @updatedAt
 
   @@map("verification")
-}
-
-model Credential {
-  id                String    @id @default(cuid())
-  studentName       String
-  degree            String
-  university        String
-  graduationDate    String
-  studentId         String?
-  vcCID             String    @unique
-  pdfCID            String?
-  attestationUID    String    @unique
-  attestationTxHash String
-  issuedAt          DateTime  @default(now())
-  revokedAt         DateTime?
-  revocationReason  String?
-  issuerDID         String
-  createdBy         String?
-  user              User?     @relation(fields: [createdBy], references: [id], onDelete: SetNull)
-
-  @@index([attestationUID])
-  @@index([vcCID])
-  @@index([studentName])
-  @@map("credential")
 }
 
 model Organization {

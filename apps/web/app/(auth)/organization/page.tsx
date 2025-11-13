@@ -15,7 +15,6 @@ import {
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
-import env from "@/utils/env";
 import { toast } from "sonner";
 
 type Step = "signin" | "organization";
@@ -50,7 +49,7 @@ export default function OrganizationPage() {
     // TODO: Implement Google sign-in
     await authClient.signIn.social({
       provider: "google",
-      callbackURL: `${env.FRONTEND_URL}/organization`,
+      callbackURL: `/organization`,
     });
   };
 

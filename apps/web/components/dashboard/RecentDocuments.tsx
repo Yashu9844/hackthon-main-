@@ -1,7 +1,21 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Document } from "@repo/types";
-import { GraduationCap, FileText, Briefcase, File, CheckCircle, Clock, XCircle } from "lucide-react";
+import {
+  GraduationCap,
+  FileText,
+  Briefcase,
+  File,
+  CheckCircle,
+  Clock,
+  XCircle,
+} from "lucide-react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 
@@ -38,7 +52,7 @@ export function RecentDocuments({ documents }: RecentDocumentsProps) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold">Recent Documents</h2>
+        <h2 className="text-2xl font-bold">All Documents</h2>
         <Link href="/wallet">
           <Button variant="ghost">View All →</Button>
         </Link>
@@ -56,14 +70,18 @@ export function RecentDocuments({ documents }: RecentDocumentsProps) {
                   <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                     <Icon className="h-6 w-6 text-primary" />
                   </div>
-                  <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${status.className}`}>
+                  <div
+                    className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${status.className}`}
+                  >
                     <StatusIcon className="h-3 w-3" />
                     {status.label}
                   </div>
                 </div>
                 <CardTitle className="mt-4 line-clamp-1">{doc.name}</CardTitle>
                 <CardDescription>
-                  {formatDistanceToNow(new Date(doc.uploadedAt), { addSuffix: true })}
+                  {formatDistanceToNow(new Date(doc.uploadedAt), {
+                    addSuffix: true,
+                  })}
                 </CardDescription>
               </CardHeader>
               <CardContent>
