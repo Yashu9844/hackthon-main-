@@ -1,16 +1,30 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 
 interface VerificationFormProps {
   onVerificationComplete: (result: any) => void;
+  triggerVerification?: {identifier: string, type: "uid" | "cid"} | null;
 }
 
-export function VerificationForm({ onVerificationComplete }: VerificationFormProps) {
+export function VerificationForm({ onVerificationComplete, triggerVerification }: VerificationFormProps) {
   const [verificationType, setVerificationType] = useState<"uid" | "cid">("uid");
   const [identifier, setIdentifier] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Handle verification triggered from history
+  useEffect(() => {
+    if (triggerVerification) {
+      setVerificationType(triggerVerification.type);
+      setIdentifier(triggerVerification.identifier);
+      // Trigger verification automatically
+      setTimeout(() => {
+        const form = document.getElementById('verification-form') as HTMLFormElement;
+        form?.requestSubmit();
+      }, 100);
+    }
+  }, [triggerVerification]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -90,7 +104,7 @@ export function VerificationForm({ onVerificationComplete }: VerificationFormPro
         Verify Credential
       </h2>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form id="verification-form" onSubmit={handleSubmit} className="space-y-6">
         {/* Verification Type Toggle */}
         <div>
           <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">

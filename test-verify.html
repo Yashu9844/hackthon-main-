@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verification Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    input, button {
+      padding: 10px;
+      margin: 10px 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 5px;
+    }
+    .success {
+      background: #d4edda;
+      border: 1px solid #c3e6cb;
+      color: #155724;
+    }
+    .error {
+      background: #f8d7da;
+      border: 1px solid #f5c6cb;
+      color: #721c24;
+    }
+    .info {
+      background: #d1ecf1;
+      border: 1px solid #bee5eb;
+      color: #0c5460;
+    }
+    pre {
+      background: #f4f4f4;
+      padding: 10px;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Verification Test Page</h1>
+    
+    <div>
+      <h3>Test Attestation UIDs (from database):</h3>
+      <div id="uids" class="info">Loading...</div>
+    </div>
+
+    <h3>Enter Attestation UID or CID:</h3>
+    <input type="text" id="input" placeholder="0x19a7d65aecflbnf8r0vzk or bafy..." />
+    <button onclick="verify()">Verify Credential</button>
+
+    <div id="result"></div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:8000';
+
+    // Load sample UIDs on page load
+    async function loadSampleUIDs() {
+      try {
+        const response = await fetch(`${API_URL}/api/credentials/list`);
+        const credentials = await response.json();
+        
+        const active = credentials.filter(c => !c.revokedAt).slice(0, 3);
+        
+        if (active.length > 0) {
+          document.getElementById('uids').innerHTML = `
+            <strong>Active Credentials (click to copy):</strong><br>
+            ${active.map(c => `
+              <div style="cursor: pointer; padding: 5px; margin: 5px 0; background: white;" 
+                   onclick="navigator.clipboard.writeText('${c.attestationUID}'); document.getElementById('input').value='${c.attestationUID}';">
+                📋 ${c.studentName}: <code>${c.attestationUID}</code>
+              </div>
+            `).join('')}
+          `;
+        } else {
+          document.getElementById('uids').innerHTML = '⚠️ No active credentials found. Please create one using /admin first.';
+        }
+      } catch (error) {
+        document.getElementById('uids').innerHTML = '❌ Error loading credentials: ' + error.message;
+      }
+    }
+
+    async function verify() {
+      const input = document.getElementById('input').value.trim();
+      const resultDiv = document.getElementById('result');
+
+      if (!input) {
+        resultDiv.innerHTML = '<div class="error">Please enter an Attestation UID or CID</div>';
+        return;
+      }
+
+      resultDiv.innerHTML = '<div class="info">⏳ Verifying...</div>';
+
+      try {
+        const body = input.startsWith('0x') 
+          ? { attestationUID: input }
+          : { cid: input };
+
+        const response = await fetch(`${API_URL}/api/credentials/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        const data = await response.json();
+
+        if (data.isValid) {
+          resultDiv.innerHTML = `
+            <div class="success">
+              <h3>✅ Valid Credential</h3>
+              <h4>Student Information:</h4>
+              <ul>
+                <li><strong>Name:</strong> ${data.vc.studentName}</li>
+                <li><strong>Degree:</strong> ${data.vc.degree}</li>
+                <li><strong>University:</strong> ${data.vc.university}</li>
+                ${data.vc.graduationDate ? `<li><strong>Graduation Date:</strong> ${data.vc.graduationDate}</li>` : ''}
+              </ul>
+              ${data.attestation ? `
+                <h4>Blockchain Attestation:</h4>
+                <ul>
+                  <li><strong>UID:</strong> <code>${data.attestation.uid}</code></li>
+                  <li><strong>Attester:</strong> <code>${data.attestation.attester}</code></li>
+                  <li><strong>Timestamp:</strong> ${new Date(data.attestation.timestamp).toLocaleString()}</li>
+                  <li><strong>Revoked:</strong> ${data.attestation.revoked ? '❌ Yes' : '✅ No'}</li>
+                </ul>
+              ` : ''}
+              <details>
+                <summary>📄 Raw Response</summary>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+              </details>
+            </div>
+          `;
+        } else {
+          resultDiv.innerHTML = `
+            <div class="error">
+              <h3>❌ Invalid Credential</h3>
+              <p>${data.error || 'Credential not found or has been revoked'}</p>
+            </div>
+          `;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `
+          <div class="error">
+            <h3>❌ Error</h3>
+            <p>${error.message}</p>
+            <p><small>Make sure the backend is running on port 8000</small></p>
+          </div>
+        `;
+      }
+    }
+
+    // Load sample UIDs on page load
+    loadSampleUIDs();
+  </script>
+</body>
+</html>

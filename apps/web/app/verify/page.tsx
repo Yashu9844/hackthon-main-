@@ -8,6 +8,7 @@ import { VerificationHistory } from "@/components/verifier/VerificationHistory";
 export default function VerifierDashboard() {
   const [verificationResult, setVerificationResult] = useState<any>(null);
   const [verificationHistory, setVerificationHistory] = useState<any[]>([]);
+  const [triggerVerification, setTriggerVerification] = useState<{identifier: string, type: "uid" | "cid"} | null>(null);
 
   const handleVerificationComplete = (result: any) => {
     setVerificationResult(result);
@@ -23,11 +24,12 @@ export default function VerifierDashboard() {
     };
     
     setVerificationHistory((prev) => [historyItem, ...prev.slice(0, 9)]);
+    setTriggerVerification(null); // Reset trigger
   };
 
   const handleVerifyFromHistory = (identifier: string, type: "uid" | "cid") => {
-    // Trigger verification from history
-    setVerificationResult({ identifier, type, loading: true });
+    // Trigger verification from history by passing data to form
+    setTriggerVerification({ identifier, type });
   };
 
   return (
@@ -77,7 +79,10 @@ export default function VerifierDashboard() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Left Column - Verification Form */}
           <div className="lg:col-span-1">
-            <VerificationForm onVerificationComplete={handleVerificationComplete} />
+            <VerificationForm 
+              onVerificationComplete={handleVerificationComplete} 
+              triggerVerification={triggerVerification}
+            />
           </div>
 
           {/* Right Column - Results and History */}
