@@ -6,6 +6,7 @@ import cors from "cors";
 
 import * as trpcExpress from "@trpc/server/adapters/express";
 import { appRouter } from "./trpc/index";
+import credentialsRouter from "./routes/credentials-test";
 
 const app = express();
 const port = 8000;
@@ -32,6 +33,10 @@ app.use(
     createContext,
   })
 );
+
+// Credentials API routes
+app.use("/api/credentials", credentialsRouter);
+
 app.listen(port, () => {
   console.log(`Better Auth app listening on port ${port}`);
 });
