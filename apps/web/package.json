@@ -11,6 +11,10 @@
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
     "@repo/backend": "*",
+    "@repo/lib-eas": "*",
+    "@repo/lib-ipfs": "*",
+    "@repo/lib-vc": "*",
+    "@repo/shared": "*",
     "@repo/types": "*",
     "@tanstack/react-query": "^5.90.8",
     "@trpc/client": "^11.7.1",

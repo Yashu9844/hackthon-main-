@@ -6,6 +6,7 @@ import cors from "cors";
 
 import * as trpcExpress from "@trpc/server/adapters/express";
 import { appRouter } from "./trpc/index";
+import credentialsRouter from "./routes/credentials-test"; // Using test routes
 
 const app = express();
 const port = 8000;
@@ -19,6 +20,10 @@ app.use(
   })
 );
 app.all("/api/auth/*", toNodeHandler(auth));
+
+// Credentials API routes
+app.use("/api/credentials", credentialsRouter);
+
 const createContext = ({
   req,
   res,
