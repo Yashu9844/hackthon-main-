@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",
+    "@privy-io/node": "^0.4.1",
     "@repo/lib-eas": "*",
     "@repo/lib-ipfs": "*",
     "@repo/lib-vc": "*",

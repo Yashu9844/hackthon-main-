@@ -5,11 +5,17 @@ import env from "@/utils/env";
 import cors from "cors";
 
 import * as trpcExpress from "@trpc/server/adapters/express";
+import { PrivyClient } from "@privy-io/node";
 import { appRouter } from "./trpc/index";
 import credentialsRouter from "./routes/credentials-test"; // Using test routes
 
 const app = express();
 const port = 8000;
+
+const privy = new PrivyClient({
+  appId: env.PRIVY_APP_ID,
+  appSecret: env.PRIVY_APP_SECRET,
+});
 
 app.use(express.json());
 app.use(
