@@ -8,6 +8,7 @@ import * as trpcExpress from "@trpc/server/adapters/express";
 import { PrivyClient } from "@privy-io/node";
 import { appRouter } from "./trpc/index";
 import credentialsRouter from "./routes/credentials-test"; // Using test routes
+import temporalRouter from "./routes/temporal";
 
 const app = express();
 const port = 8000;
@@ -29,6 +30,9 @@ app.all("/api/auth/*", toNodeHandler(auth));
 
 // Credentials API routes
 app.use("/api/credentials", credentialsRouter);
+
+// Temporal API routes
+app.use("/api/temporal", temporalRouter);
 
 const createContext = ({
   req,

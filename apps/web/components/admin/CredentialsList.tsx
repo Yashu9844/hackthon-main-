@@ -16,10 +16,23 @@ interface Credential {
   revocationReason: string | null;
 }
 
-export function CredentialsList() {
+interface TemporalStatus {
+  total: number;
+  revealed: number;
+  pending: number;
+  expired: number;
+  nextDeadline: string | null;
+}
+
+interface Props {
+  onViewTemporal?: (credentialId: string) => void;
+}
+
+export function CredentialsList({ onViewTemporal }: Props = {}) {
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [temporalStatuses, setTemporalStatuses] = useState<Record<string, TemporalStatus>>({});
   
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -74,6 +87,27 @@ export function CredentialsList() {
       const data = await response.json();
       setCredentials(data);
       setHasMore(data.length === limit);
+      
+      // Fetch temporal status for each credential
+      const statusPromises = data.map(async (cred: Credential) => {
+        try {
+          const statusRes = await fetch(`http://localhost:8000/api/temporal/status/${cred.id}`);
+          if (statusRes.ok) {
+            const status = await statusRes.json();
+            return { id: cred.id, status };
+          }
+        } catch (err) {
+          // Ignore temporal status errors
+        }
+        return null;
+      });
+      
+      const statuses = await Promise.all(statusPromises);
+      const statusMap: Record<string, TemporalStatus> = {};
+      statuses.forEach((s) => {
+        if (s) statusMap[s.id] = s.status;
+      });
+      setTemporalStatuses(statusMap);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch credentials");
     } finally {
@@ -291,16 +325,53 @@ export function CredentialsList() {
                         )}
                       </div>
                     )}
+                    {/* Temporal Status */}
+                    {temporalStatuses[cred.id] && (
+                      <div className="mt-3 flex items-center gap-2 text-xs">
+                        <span className="flex items-center gap-1">
+                          <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            {temporalStatuses[cred.id].revealed}/{temporalStatuses[cred.id].total} Revealed
+                          </span>
+                        </span>
+                        {temporalStatuses[cred.id].pending > 0 && (
+                          <span className="flex items-center gap-1">
+                            <span className="h-2 w-2 rounded-full bg-yellow-500 animate-pulse"></span>
+                            <span className="text-gray-600 dark:text-gray-400">
+                              {temporalStatuses[cred.id].pending} Pending
+                            </span>
+                          </span>
+                        )}
+                        {temporalStatuses[cred.id].expired > 0 && (
+                          <span className="flex items-center gap-1">
+                            <span className="h-2 w-2 rounded-full bg-red-500"></span>
+                            <span className="text-red-600 dark:text-red-400">
+                              {temporalStatuses[cred.id].expired} Expired
+                            </span>
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  {!cred.revokedAt && (
-                    <button
-                      onClick={() => openRevokeModal(cred)}
-                      disabled={revokingId === cred.id}
-                      className="ml-4 rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Revoke
-                    </button>
-                  )}
+                  <div className="ml-4 flex flex-col gap-2">
+                    {onViewTemporal && (
+                      <button
+                        onClick={() => onViewTemporal(cred.id)}
+                        className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                      >
+                        ⚡ Timeline
+                      </button>
+                    )}
+                    {!cred.revokedAt && (
+                      <button
+                        onClick={() => openRevokeModal(cred)}
+                        disabled={revokingId === cred.id}
+                        className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Revoke
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import { PrismaClient } from '../generated/prisma/client.js';
+import { temporalChain } from '../lib/temporal-chain';
+import { promises as fs } from 'fs';
+import path from 'path';
 
 const prisma = new PrismaClient();
 const router = Router();
@@ -38,7 +41,7 @@ function createSimpleVC(data: any) {
 // POST /api/credentials/issue
 router.post('/issue', async (req, res) => {
   try {
-    const { studentName, degree, university, graduationDate, studentId } = req.body;
+    const { studentName, degree, university, graduationDate, studentId, temporalPeriods = 5 } = req.body;
 
     // Validate
     if (!studentName || !degree || !university || !graduationDate) {
@@ -56,7 +59,11 @@ router.post('/issue', async (req, res) => {
     const mockUID = `0x${Date.now().toString(16)}${Math.random().toString(36).substr(2, 16)}`;
     const mockTxHash = `0x${Math.random().toString(36).substr(2, 64)}`;
 
-    // Save to DB
+    // 🆕 GENERATE TEMPORAL CHAIN
+    const issueDate = new Date();
+    const chain = temporalChain.generateChain(temporalPeriods);
+
+    // Save to DB with temporal commitments
     const record = await prisma.credential.create({
       data: {
         studentName,
@@ -70,8 +77,33 @@ router.post('/issue', async (req, res) => {
         attestationTxHash: mockTxHash,
         issuerDID: process.env.ISSUER_DID || 'did:key:zTest',
         createdBy: null,
+        // 🆕 CREATE TEMPORAL COMMITMENTS
+        temporalCommitments: {
+          create: chain.commitments.map((commitment, epoch) => ({
+            epoch,
+            commitment,
+            revealDeadline: temporalChain.calculateDeadline(issueDate, epoch, 12),
+            revealed: false,
+          }))
+        }
       },
+      include: {
+        temporalCommitments: true
+      }
     });
+
+    // 🆕 STORE SECRETS SECURELY
+    const secretsFile = `credential-secrets-${record.id}.json`;
+    const secretsDir = path.join(process.cwd(), 'secrets');
+    await fs.writeFile(
+      path.join(secretsDir, secretsFile),
+      JSON.stringify({
+        credentialId: record.id,
+        secrets: chain.secrets,
+        baseSecret: chain.baseSecret
+      }),
+      'utf8'
+    );
 
     res.json({
       success: true,
@@ -87,6 +119,18 @@ router.post('/issue', async (req, res) => {
       issuedAt: record.issuedAt.toISOString(),
       revokedAt: null,
       vc,
+      // 🆕 TEMPORAL INFO
+      temporal: {
+        enabled: true,
+        periods: temporalPeriods,
+        commitments: record.temporalCommitments.map(tc => ({
+          epoch: tc.epoch,
+          commitment: tc.commitment,
+          deadline: tc.revealDeadline.toISOString(),
+          revealed: tc.revealed
+        })),
+        nextRevealDue: record.temporalCommitments[0]?.revealDeadline.toISOString()
+      }
     });
   } catch (error: any) {
     console.error('Issue error:', error);

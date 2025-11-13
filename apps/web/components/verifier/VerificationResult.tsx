@@ -1,10 +1,51 @@
 "use client";
 
+import { useState, useEffect } from "react";
+
 interface VerificationResultProps {
   result: any;
 }
 
+interface TemporalStatus {
+  total: number;
+  revealed: number;
+  pending: number;
+  expired: number;
+  nextDeadline: string | null;
+  commitments: Array<{
+    epoch: number;
+    revealed: boolean;
+    revealDeadline: string;
+    revealedAt: string | null;
+  }>;
+}
+
 export function VerificationResult({ result }: VerificationResultProps) {
+  const [temporalStatus, setTemporalStatus] = useState<TemporalStatus | null>(null);
+  const [loadingTemporal, setLoadingTemporal] = useState(false);
+  
+  useEffect(() => {
+    if (result?.credential?.id) {
+      fetchTemporalStatus();
+    }
+  }, [result?.credential?.id]);
+  
+  const fetchTemporalStatus = async () => {
+    if (!result?.credential?.id) return;
+    try {
+      setLoadingTemporal(true);
+      const res = await fetch(`http://localhost:8000/api/temporal/status/${result.credential.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setTemporalStatus(data);
+      }
+    } catch (err) {
+      // Ignore temporal errors
+    } finally {
+      setLoadingTemporal(false);
+    }
+  };
+  
   if (!result) return null;
 
   const formatDate = (dateString: string) => {
@@ -175,6 +216,72 @@ export function VerificationResult({ result }: VerificationResultProps) {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      
+      {/* Temporal Status */}
+      {temporalStatus && (
+        <div className="border-t border-gray-200 p-6 dark:border-gray-700">
+          <h4 className="mb-4 text-sm font-semibold uppercase text-gray-500 dark:text-gray-400 flex items-center gap-2">
+            ⚡ Temporal Commitment Status
+            <span className="text-xs font-normal normal-case text-gray-400">Time-Locked Liveness Proof</span>
+          </h4>
+          
+          <div className="space-y-4">
+            {/* Status Summary */}
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-green-500"></span>
+                <span className="text-gray-700 dark:text-gray-300">
+                  <strong>{temporalStatus.revealed}</strong> of <strong>{temporalStatus.total}</strong> commitments revealed
+                </span>
+              </div>
+              {temporalStatus.pending > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="h-3 w-3 rounded-full bg-yellow-500 animate-pulse"></span>
+                  <span className="text-gray-700 dark:text-gray-300">
+                    <strong>{temporalStatus.pending}</strong> pending
+                  </span>
+                </div>
+              )}
+              {temporalStatus.expired > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="h-3 w-3 rounded-full bg-red-500"></span>
+                  <span className="text-red-600 dark:text-red-400">
+                    <strong>{temporalStatus.expired}</strong> expired
+                  </span>
+                </div>
+              )}
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="relative h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+              <div 
+                className="h-full bg-gradient-to-r from-green-500 to-blue-500 transition-all duration-500"
+                style={{ width: `${(temporalStatus.revealed / temporalStatus.total) * 100}%` }}
+              />
+            </div>
+            
+            {/* Next Deadline */}
+            {temporalStatus.nextDeadline && (
+              <div className="rounded-lg bg-yellow-50 p-3 dark:bg-yellow-900/20">
+                <p className="text-xs text-yellow-800 dark:text-yellow-400">
+                  <strong>Next Commitment Due:</strong> {new Date(temporalStatus.nextDeadline).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit"
+                  })}
+                </p>
+              </div>
+            )}
+            
+            {/* Info */}
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              This credential uses time-locked cryptographic commitments. The university must periodically reveal secrets to prove institutional liveness, or the credential auto-revokes.
+            </p>
           </div>
         </div>
       )}

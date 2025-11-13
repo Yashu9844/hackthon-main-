@@ -4,10 +4,12 @@ import { useState } from "react";
 import { IssueCredentialForm } from "@/components/admin/IssueCredentialForm";
 import { CredentialsList } from "@/components/admin/CredentialsList";
 import { AdminStats } from "@/components/admin/AdminStats";
+import { TemporalTimeline } from "@/components/temporal/TemporalTimeline";
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<"issue" | "manage">("issue");
+  const [activeTab, setActiveTab] = useState<"issue" | "manage" | "temporal">("issue");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedCredentialId, setSelectedCredentialId] = useState<string | null>(null);
 
   const handleCredentialIssued = () => {
     setRefreshKey((prev) => prev + 1);
@@ -83,14 +85,46 @@ export default function AdminDashboard() {
             >
               Manage Credentials
             </button>
+            <button
+              onClick={() => setActiveTab("temporal")}
+              className={`whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium ${
+                activeTab === "temporal"
+                  ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400"
+              }`}
+            >
+              ⚡ Temporal Timeline
+            </button>
           </nav>
         </div>
 
         {/* Content */}
         {activeTab === "issue" ? (
           <IssueCredentialForm onSuccess={handleCredentialIssued} />
+        ) : activeTab === "manage" ? (
+          <CredentialsList key={refreshKey} onViewTemporal={(id) => {
+            setSelectedCredentialId(id);
+            setActiveTab("temporal");
+          }} />
         ) : (
-          <CredentialsList key={refreshKey} />
+          <div>
+            {!selectedCredentialId ? (
+              <div className="rounded-lg bg-white p-8 shadow dark:bg-gray-800 text-center">
+                <h3 className="text-lg font-semibold mb-2">No Credential Selected</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  Select a credential from the Manage tab to view its temporal timeline
+                </p>
+                <button
+                  onClick={() => setActiveTab("manage")}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Go to Manage
+                </button>
+              </div>
+            ) : (
+              <TemporalTimeline credentialId={selectedCredentialId} />
+            )}
+          </div>
         )}
       </div>
     </div>
