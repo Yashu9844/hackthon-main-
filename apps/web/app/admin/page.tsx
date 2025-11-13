@@ -16,6 +16,36 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Navigation Bar */}
+      <nav className="border-b bg-card">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center gap-8">
+              <h1 className="text-xl font-bold">PixelGenesis</h1>
+              <div className="hidden md:flex gap-4">
+                <a href="/dashboard" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                  Dashboard
+                </a>
+                <a href="/wallet" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                  Wallet
+                </a>
+                <a href="/verify" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                  Verify
+                </a>
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                  Admin
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <a href="/login" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                Login
+              </a>
+            </div>
+          </div>
+        </div>
+      </nav>
+
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
