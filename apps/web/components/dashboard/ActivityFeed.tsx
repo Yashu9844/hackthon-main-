@@ -30,12 +30,6 @@ const activityColors = {
 export function ActivityFeed({ activities }: ActivityFeedProps) {
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold">Recent Activity</h2>
-        <Link href="/activity">
-          <Button variant="ghost">View All →</Button>
-        </Link>
-      </div>
       <Card>
         <CardContent className="p-6">
           <div className="space-y-4">

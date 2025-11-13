@@ -5,18 +5,12 @@ import env from "@/utils/env";
 import cors from "cors";
 
 import * as trpcExpress from "@trpc/server/adapters/express";
-import { PrivyClient } from "@privy-io/node";
 import { appRouter } from "./trpc/index";
-import credentialsRouter from "./routes/credentials-test"; // Using test routes
+import credentialsRouter from "./routes/credentials-test";
 import temporalRouter from "./routes/temporal";
 
 const app = express();
 const port = 8000;
-
-const privy = new PrivyClient({
-  appId: env.PRIVY_APP_ID,
-  appSecret: env.PRIVY_APP_SECRET,
-});
 
 app.use(express.json());
 app.use(
@@ -28,17 +22,11 @@ app.use(
 );
 app.all("/api/auth/*", toNodeHandler(auth));
 
-// Credentials API routes
-app.use("/api/credentials", credentialsRouter);
-
-// Temporal API routes
-app.use("/api/temporal", temporalRouter);
-
 const createContext = ({
   req,
   res,
-}: trpcExpress.CreateExpressContextOptions) => ({}); // no context
-type Context = Awaited<ReturnType<typeof createContext>>;
+}: trpcExpress.CreateExpressContextOptions) => ({});
+
 app.use(
   "/trpc",
   trpcExpress.createExpressMiddleware({
@@ -46,6 +34,13 @@ app.use(
     createContext,
   })
 );
+
+// Credentials API routes
+app.use("/api/credentials", credentialsRouter);
+
+// Temporal API routes
+app.use("/api/temporal", temporalRouter);
+
 app.listen(port, () => {
   console.log(`Better Auth app listening on port ${port}`);
 });

@@ -11,11 +11,7 @@ import {
   Briefcase, 
   File, 
   Upload,
-  LogOut,
-  CheckCircle,
-  Clock,
-  XCircle,
-  Filter
+  LogOut
 } from "lucide-react";
 import Link from "next/link";
 import { Document } from "@repo/types";
@@ -99,38 +95,54 @@ const documentIcons = {
   other: File,
 };
 
-const statusConfig = {
-  verified: {
-    icon: CheckCircle,
-    className: "text-green-600 bg-green-50 dark:bg-green-950",
-    label: "Verified",
-  },
-  pending: {
-    icon: Clock,
-    className: "text-yellow-600 bg-yellow-50 dark:bg-yellow-950",
-    label: "Pending",
-  },
-  unverified: {
-    icon: XCircle,
-    className: "text-gray-600 bg-gray-50 dark:bg-gray-950",
-    label: "Unverified",
-  },
-};
-
 type FilterType = "all" | "academic" | "government" | "professional" | "other";
-type FilterStatus = "all" | "verified" | "pending" | "unverified";
 
 export default function WalletPage() {
   const { ready, authenticated, user, logout } = usePrivy();
   const router = useRouter();
   const [filterType, setFilterType] = useState<FilterType>("all");
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (ready && !authenticated) {
       router.push("/login");
     }
   }, [ready, authenticated, router]);
+
+  // Fetch documents from API
+  useEffect(() => {
+    if (ready && authenticated) {
+      fetchDocuments();
+    }
+  }, [ready, authenticated]);
+
+  const fetchDocuments = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('privy:token');
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch('/api/documents', {
+        headers,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setDocuments(result.documents);
+      } else {
+        console.error('Failed to fetch documents:', result.error);
+      }
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!ready || !authenticated || !user) {
     return (
@@ -141,10 +153,9 @@ export default function WalletPage() {
   }
 
   // Filter documents
-  const filteredDocuments = dummyDocuments.filter((doc) => {
+  const filteredDocuments = documents.filter((doc) => {
     const typeMatch = filterType === "all" || doc.type === filterType;
-    const statusMatch = filterStatus === "all" || doc.status === filterStatus;
-    return typeMatch && statusMatch;
+    return typeMatch;
   });
 
   return (
@@ -160,7 +171,7 @@ export default function WalletPage() {
                   Dashboard
                 </Button>
                 <Button variant="ghost">Wallet</Button>
-                <Button variant="ghost" onClick={() => router.push("/verify")}>
+                <Button variant="ghost" onClick={() => router.push("/user-verify")}>
                   Verify
                 </Button>
                 <Button variant="ghost" onClick={() => router.push("/admin")}>
@@ -206,7 +217,7 @@ export default function WalletPage() {
               size="sm"
               onClick={() => setFilterType("all")}
             >
-              All ({dummyDocuments.length})
+              All ({documents.length})
             </Button>
             <Button
               variant={filterType === "academic" ? "default" : "outline"}
@@ -214,7 +225,7 @@ export default function WalletPage() {
               onClick={() => setFilterType("academic")}
             >
               <GraduationCap className="h-4 w-4 mr-1" />
-              Academic ({dummyDocuments.filter((d) => d.type === "academic").length})
+              Academic ({documents.filter((d) => d.type === "academic").length})
             </Button>
             <Button
               variant={filterType === "government" ? "default" : "outline"}
@@ -222,7 +233,7 @@ export default function WalletPage() {
               onClick={() => setFilterType("government")}
             >
               <FileText className="h-4 w-4 mr-1" />
-              Government ({dummyDocuments.filter((d) => d.type === "government").length})
+              Government ({documents.filter((d) => d.type === "government").length})
             </Button>
             <Button
               variant={filterType === "professional" ? "default" : "outline"}
@@ -230,42 +241,20 @@ export default function WalletPage() {
               onClick={() => setFilterType("professional")}
             >
               <Briefcase className="h-4 w-4 mr-1" />
-              Professional ({dummyDocuments.filter((d) => d.type === "professional").length})
-            </Button>
-          </div>
-          <div className="border-l pl-4 flex gap-2">
-            <Button
-              variant={filterStatus === "all" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilterStatus("all")}
-            >
-              All Status
-            </Button>
-            <Button
-              variant={filterStatus === "verified" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilterStatus("verified")}
-            >
-              <CheckCircle className="h-4 w-4 mr-1" />
-              Verified
-            </Button>
-            <Button
-              variant={filterStatus === "pending" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilterStatus("pending")}
-            >
-              <Clock className="h-4 w-4 mr-1" />
-              Pending
+              Professional ({documents.filter((d) => d.type === "professional").length})
             </Button>
           </div>
         </div>
 
         {/* Documents Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredDocuments.map((doc) => {
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Loading documents...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredDocuments.map((doc) => {
             const Icon = documentIcons[doc.type];
-            const status = statusConfig[doc.status];
-            const StatusIcon = status.icon;
 
             return (
               <Card key={doc.id} className="hover:shadow-lg transition-shadow">
@@ -273,12 +262,6 @@ export default function WalletPage() {
                   <div className="flex items-start justify-between">
                     <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                       <Icon className="h-6 w-6 text-primary" />
-                    </div>
-                    <div
-                      className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${status.className}`}
-                    >
-                      <StatusIcon className="h-3 w-3" />
-                      {status.label}
                     </div>
                   </div>
                   <CardTitle className="mt-4 line-clamp-2">{doc.name}</CardTitle>
@@ -310,9 +293,10 @@ export default function WalletPage() {
               </Card>
             );
           })}
-        </div>
+          </div>
+        )}
 
-        {filteredDocuments.length === 0 && (
+        {!loading && filteredDocuments.length === 0 && (
           <div className="text-center py-12">
             <File className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No documents found</h3>

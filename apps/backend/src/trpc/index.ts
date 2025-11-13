@@ -1,4 +1,6 @@
 import { initTRPC } from "@trpc/server";
+
+// import { organizationRouter } from "./routers/organization";
 /**
  * Initialization of tRPC backend
  * Should be done only once per backend!
@@ -12,7 +14,7 @@ export const router = t.router;
 export const publicProcedure = t.procedure;
 
 export const appRouter = router({
-  getHello: publicProcedure.query(() => "hello"),
+  // organization: organizationRouter,
 });
 
 export type AppRouter = typeof appRouter;

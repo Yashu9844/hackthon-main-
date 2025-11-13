@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Document } from "@repo/types";
+import QRCode from "qrcode";
 
 // Dummy data
 const dummyDocuments: Document[] = [
@@ -74,10 +75,12 @@ export default function ShareDocumentPage() {
   const documentId = params.documentId as string;
   
   const [document, setDocument] = useState<Document | null>(null);
+  const [loading, setLoading] = useState(true);
   const [expiryTime, setExpiryTime] = useState<string>("24h");
   const [shareLink, setShareLink] = useState<string>("");
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
   
   // Selective disclosure fields
   const [selectedFields, setSelectedFields] = useState<SelectiveFields>({
@@ -97,13 +100,39 @@ export default function ShareDocumentPage() {
   }, [ready, authenticated, router]);
 
   useEffect(() => {
-    const found = dummyDocuments.find(d => d.id === documentId);
-    if (found) {
-      setDocument(found);
+    if (ready && authenticated && documentId) {
+      fetchDocument();
     }
-  }, [documentId]);
+  }, [ready, authenticated, documentId]);
 
-  if (!ready || !authenticated || !user) {
+  const fetchDocument = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('privy:token');
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`/api/documents/${documentId}`, {
+        headers,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setDocument(result.document);
+      } else {
+        console.error('Failed to fetch document:', result.error);
+      }
+    } catch (error) {
+      console.error('Error fetching document:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!ready || !authenticated || !user || loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <p>Loading...</p>
@@ -161,16 +190,53 @@ export default function ShareDocumentPage() {
     });
   };
 
-  const generateShareLink = () => {
-    // Generate mock share link with selected fields encoded
-    const selectedFieldsList = Object.entries(selectedFields)
-      .filter(([_, selected]) => selected)
-      .map(([field, _]) => field);
-    
-    const encodedFields = btoa(JSON.stringify(selectedFieldsList));
-    const link = `${window.location.origin}/verify/${document.id}?fields=${encodedFields}&expires=${expiryTime}`;
-    setShareLink(link);
-    setShowQR(true);
+  const generateShareLink = async () => {
+    try {
+      const token = localStorage.getItem('privy:token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`/api/documents/${documentId}/share`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          selectedFields,
+          expiryTime,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setShareLink(result.shareLink);
+        
+        // Generate QR code
+        try {
+          const qrDataUrl = await QRCode.toDataURL(result.shareLink, {
+            width: 256,
+            margin: 2,
+            color: {
+              dark: '#000000',
+              light: '#FFFFFF',
+            },
+          });
+          setQrCodeUrl(qrDataUrl);
+          setShowQR(true);
+        } catch (qrError) {
+          console.error('Failed to generate QR code:', qrError);
+          setShowQR(true); // Still show the link even if QR fails
+        }
+      } else {
+        alert(`Failed to generate share link: ${result.error}`);
+      }
+    } catch (error: any) {
+      console.error('Error generating share link:', error);
+      alert(`Failed to generate share link: ${error.message}`);
+    }
   };
 
   const copyLink = () => {
@@ -196,7 +262,7 @@ export default function ShareDocumentPage() {
                 <Button variant="ghost" onClick={() => router.push("/wallet")}>
                   Wallet
                 </Button>
-                <Button variant="ghost" onClick={() => router.push("/verify")}>
+                <Button variant="ghost" onClick={() => router.push("/user-verify")}>
                   Verify
                 </Button>
               </div>
@@ -533,18 +599,24 @@ export default function ShareDocumentPage() {
                     </div>
                   </div>
 
-                  {showQR && (
+                  {showQR && qrCodeUrl && (
                     <div className="text-center">
                       <div className="bg-white p-4 rounded-lg inline-block border-2">
-                        <div className="h-48 w-48 bg-muted flex items-center justify-center">
-                          <QrCode className="h-16 w-16 text-muted-foreground" />
-                          <p className="text-xs text-muted-foreground ml-2">QR Code<br/>Preview</p>
-                        </div>
+                        <img 
+                          src={qrCodeUrl} 
+                          alt="QR Code" 
+                          className="h-64 w-64"
+                        />
                       </div>
-                      <Button variant="outline" className="w-full mt-3" size="sm">
-                        <Download className="h-4 w-4 mr-2" />
-                        Download QR Code
-                      </Button>
+                      <a 
+                        href={qrCodeUrl} 
+                        download="share-qr-code.png"
+                      >
+                        <Button variant="outline" className="w-full mt-3" size="sm">
+                          <Download className="h-4 w-4 mr-2" />
+                          Download QR Code
+                        </Button>
+                      </a>
                     </div>
                   )}
 

@@ -9,7 +9,15 @@ import { RecentDocuments } from "@/components/dashboard/RecentDocuments";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { FileText, CheckCircle, Share2, Eye, Copy, QrCode, LogOut } from "lucide-react";
+import {
+  FileText,
+  CheckCircle,
+  Share2,
+  Eye,
+  Copy,
+  QrCode,
+  LogOut,
+} from "lucide-react";
 import { Document, Activity } from "@repo/types";
 
 // Dummy data for development
@@ -71,7 +79,8 @@ const dummyActivities: Activity[] = [
   {
     id: "1",
     type: "share",
-    description: 'You shared "Bachelor of Technology Degree" with XYZ Corporation',
+    description:
+      'You shared "Bachelor of Technology Degree" with XYZ Corporation',
     timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
     documentName: "Bachelor of Technology Degree",
   },
@@ -109,81 +118,6 @@ export default function DashboardPage() {
   const { ready, authenticated, user, logout } = usePrivy();
   const router = useRouter();
   const [copied, setCopied] = useState(false);
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [activities, setActivities] = useState<any[]>([]);
-  const [dashboardStats, setDashboardStats] = useState<any>({
-    totalDocuments: 0,
-    totalViews: 0,
-    activeShares: 0,
-    blockchainTransactions: 0,
-  });
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (ready && !authenticated) {
-      router.push("/login");
-    }
-  }, [ready, authenticated, router]);
-
-  // Fetch documents and activities from API
-  useEffect(() => {
-    if (ready && authenticated) {
-      fetchDocuments();
-      fetchActivities();
-    }
-  }, [ready, authenticated]);
-
-  const fetchDocuments = async () => {
-    try {
-      const token = localStorage.getItem('privy:token');
-      const headers: HeadersInit = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const response = await fetch('/api/documents', {
-        headers,
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setDocuments(result.documents);
-      } else {
-        console.error('Failed to fetch documents:', result.error);
-      }
-    } catch (error) {
-      console.error('Error fetching documents:', error);
-    }
-  };
-
-  const fetchActivities = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('privy:token');
-      const headers: HeadersInit = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const response = await fetch('/api/activities', {
-        headers,
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setActivities(result.activities);
-        setDashboardStats(result.stats);
-      } else {
-        console.error('Failed to fetch activities:', result.error);
-      }
-    } catch (error) {
-      console.error('Error fetching activities:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const copyDID = () => {
     if (user?.id) {
@@ -193,7 +127,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (!ready || !authenticated || !user) {
+  if (!ready) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <p>Loading...</p>
@@ -201,10 +135,14 @@ export default function DashboardPage() {
     );
   }
 
+  if (!authenticated) router.push("/login");
+
   const stats = {
-    totalDocuments: dashboardStats.totalDocuments,
-    activeShares: dashboardStats.activeShares,
-    totalViews: dashboardStats.totalViews,
+    totalDocuments: dummyDocuments.length,
+    verifiedCredentials: dummyDocuments.filter((d) => d.status === "verified")
+      .length,
+    activeShares: 5,
+    totalViews: 47,
   };
 
   return (
@@ -220,7 +158,7 @@ export default function DashboardPage() {
                 <Button variant="ghost" onClick={() => router.push("/wallet")}>
                   Wallet
                 </Button>
-                <Button variant="ghost" onClick={() => router.push("/user-verify")}>
+                <Button variant="ghost" onClick={() => router.push("/verify")}>
                   Verify
                 </Button>
                 <Button variant="ghost" onClick={() => router.push("/admin")}>
@@ -246,15 +184,18 @@ export default function DashboardPage() {
         {/* Hero Section */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2">
-            Welcome back, {user.email?.address || user.wallet?.address || "User"}
+            Welcome back,{" "}
+            {user?.email?.address || user?.wallet?.address || "User"}
           </h2>
           <Card className="mt-4">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <p className="text-sm text-muted-foreground mb-2">Your Decentralized Identity</p>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Your Decentralized Identity
+                  </p>
                   <code className="text-lg font-mono bg-muted px-3 py-2 rounded">
-                    {user.id}
+                    {user?.id}
                   </code>
                 </div>
                 <div className="flex gap-2">
@@ -276,54 +217,8 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <StatsCard
-            title="Total Documents"
-            value={stats.totalDocuments}
-            icon={FileText}
-            description="In your vault"
-          />
-          <StatsCard
-            title="Active Shares"
-            value={stats.activeShares}
-            icon={Share2}
-            description="Shared with others"
-          />
-          <StatsCard
-            title="Total Views"
-            value={stats.totalViews}
-            icon={Eye}
-            description="This month"
-          />
-        </div>
-
-        {/* Quick Actions */}
         <div className="mb-8">
-          <QuickActions />
-        </div>
-
-        {/* Recent Documents */}
-        <div className="mb-8">
-          {loading ? (
-            <p className="text-muted-foreground">Loading documents...</p>
-          ) : (
-            <RecentDocuments documents={documents} />
-          )}
-        </div>
-
-        {/* Ethereum Blockchain Transactions */}
-        <div className="mb-8">
-          {loading ? (
-            <p className="text-muted-foreground">Loading transactions...</p>
-          ) : (
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold">⛓️ Ethereum Blockchain Transactions</h2>
-              </div>
-              <ActivityFeed activities={activities} />
-            </div>
-          )}
+          <RecentDocuments documents={dummyDocuments} />
         </div>
       </main>
     </div>

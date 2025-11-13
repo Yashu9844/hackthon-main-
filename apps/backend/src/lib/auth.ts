@@ -3,6 +3,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 // If your Prisma file is located elsewhere, you can change the path
 import { db } from "@/lib/prisma-client";
 import env from "@/utils/env";
+import { organization } from "better-auth/plugins";
 
 export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
@@ -17,4 +18,18 @@ export const auth = betterAuth({
     },
   },
   trustedOrigins: [env.FRONTEND_URL],
+  plugins: [
+    organization({
+      organizationHooks: {
+        // beforeUpdateOrganization: async ({ organization, user, member }) => {
+        //   return {
+        //     data: {
+        //       ...organization,
+        //       name: organization.name?.toLowerCase(),
+        //     },
+        //   };
+        // },
+      },
+    }),
+  ],
 });

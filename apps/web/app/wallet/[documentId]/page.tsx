@@ -82,6 +82,7 @@ export default function DocumentDetailPage() {
   
   const [copied, setCopied] = useState(false);
   const [document, setDocument] = useState<Document | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (ready && !authenticated) {
@@ -90,17 +91,50 @@ export default function DocumentDetailPage() {
   }, [ready, authenticated, router]);
 
   useEffect(() => {
-    // Find document by ID
-    const found = dummyDocuments.find(d => d.id === documentId);
-    if (found) {
-      setDocument(found);
+    if (ready && authenticated && documentId) {
+      fetchDocument();
     }
-  }, [documentId]);
+  }, [ready, authenticated, documentId]);
+
+  const fetchDocument = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('privy:token');
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`/api/documents/${documentId}`, {
+        headers,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setDocument(result.document);
+      } else {
+        console.error('Failed to fetch document:', result.error);
+      }
+    } catch (error) {
+      console.error('Error fetching document:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!ready || !authenticated || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Loading document...</p>
       </div>
     );
   }
@@ -157,7 +191,7 @@ export default function DocumentDetailPage() {
                 <Button variant="ghost" onClick={() => router.push("/wallet")}>
                   Wallet
                 </Button>
-                <Button variant="ghost" onClick={() => router.push("/verify")}>
+                <Button variant="ghost" onClick={() => router.push("/user-verify")}>
                   Verify
                 </Button>
               </div>
@@ -211,19 +245,48 @@ export default function DocumentDetailPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Document Preview</CardTitle>
+                <CardDescription>
+                  Stored on IPFS: {(document as any).pdfCid || document.ipfsCid}
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="aspect-[3/4] bg-muted rounded-lg flex items-center justify-center border-2 border-dashed">
-                  <div className="text-center">
-                    <FileText className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">
-                      Document preview will appear here
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      (PDF, Image, or Document viewer)
-                    </p>
+                {(document as any).pdfCid ? (
+                  <div className="bg-muted rounded-lg overflow-hidden border">
+                    <img 
+                      src={`https://gateway.pinata.cloud/ipfs/${(document as any).pdfCid}`}
+                      alt={document.name}
+                      className="w-full h-auto"
+                      onError={(e) => {
+                        // If image fails to load, show fallback
+                        (e.target as HTMLImageElement).style.display = 'none';
+                        const fallback = document.createElement('div');
+                        fallback.className = 'aspect-[3/4] flex items-center justify-center';
+                        fallback.innerHTML = `
+                          <div class="text-center p-4">
+                            <svg class="h-16 w-16 mx-auto text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                            </svg>
+                            <p class="text-muted-foreground">Unable to preview this document</p>
+                            <a href="https://gateway.pinata.cloud/ipfs/${(document as any).pdfCid}" target="_blank" class="text-sm text-primary hover:underline mt-2 inline-block">View on IPFS →</a>
+                          </div>
+                        `;
+                        (e.target as HTMLImageElement).parentElement?.appendChild(fallback);
+                      }}
+                    />
                   </div>
-                </div>
+                ) : (
+                  <div className="aspect-[3/4] bg-muted rounded-lg flex items-center justify-center border-2 border-dashed">
+                    <div className="text-center">
+                      <FileText className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">
+                        No document file attached
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Only VC metadata is available
+                      </p>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -253,12 +316,48 @@ export default function DocumentDetailPage() {
                   </div>
 
                   {document.issuer && (
-                    <div className="col-span-2">
+                    <div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
                         <Building className="h-4 w-4" />
                         <span>Issued By</span>
                       </div>
                       <p className="font-medium">{document.issuer}</p>
+                    </div>
+                  )}
+
+                  {(document as any).graduationDate && (
+                    <div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                        <Calendar className="h-4 w-4" />
+                        <span>Issue/Graduation Date</span>
+                      </div>
+                      <p className="font-medium">
+                        {new Date((document as any).graduationDate).toLocaleDateString()}
+                      </p>
+                    </div>
+                  )}
+
+                  {(document as any).attestationUID && (
+                    <div className="col-span-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                        <Hash className="h-4 w-4" />
+                        <span>Attestation UID</span>
+                      </div>
+                      <p className="font-mono text-xs bg-muted p-2 rounded break-all">
+                        {(document as any).attestationUID}
+                      </p>
+                    </div>
+                  )}
+
+                  {(document as any).attestationTxHash && (
+                    <div className="col-span-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                        <Hash className="h-4 w-4" />
+                        <span>Transaction Hash</span>
+                      </div>
+                      <p className="font-mono text-xs bg-muted p-2 rounded break-all">
+                        {(document as any).attestationTxHash}
+                      </p>
                     </div>
                   )}
 
@@ -360,7 +459,7 @@ export default function DocumentDetailPage() {
                     "id": `vc:${document.id}`,
                     "type": ["VerifiableCredential"],
                     "issuer": document.issuer || "Self-Issued",
-                    "issuanceDate": document.uploadedAt.toISOString(),
+                    "issuanceDate": new Date(document.uploadedAt).toISOString(),
                     "credentialSubject": {
                       "id": user.id,
                       "documentName": document.name,
@@ -369,7 +468,7 @@ export default function DocumentDetailPage() {
                     },
                     "proof": {
                       "type": "EcdsaSecp256k1Signature2019",
-                      "created": document.uploadedAt.toISOString(),
+                      "created": new Date(document.uploadedAt).toISOString(),
                       "proofPurpose": "assertionMethod",
                       "verificationMethod": "did:example:issuer#key-1"
                     }

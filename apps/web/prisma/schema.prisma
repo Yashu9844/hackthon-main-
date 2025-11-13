@@ -1,0 +1,132 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String       @id
+  name          String
+  email         String
+  emailVerified Boolean      @default(false)
+  image         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @default(now()) @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  credentials   Credential[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@map("verification")
+}
+
+model Credential {
+  id                String             @id @default(cuid())
+  studentName       String
+  degree            String
+  university        String
+  graduationDate    String
+  studentId         String?
+  vcCID             String             @unique
+  pdfCID            String?
+  attestationUID    String             @unique
+  attestationTxHash String
+  issuedAt          DateTime           @default(now())
+  revokedAt         DateTime?
+  revocationReason  String?
+  issuerDID         String
+  createdBy         String?
+  user              User?              @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  shares            SharedCredential[]
+
+  @@index([attestationUID])
+  @@index([vcCID])
+  @@index([studentName])
+  @@map("credential")
+}
+
+model SharedCredential {
+  id            String     @id @default(cuid())
+  token         String     @unique
+  credentialId  String
+  credential    Credential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+  sharedBy      String
+  selectedFields String    // JSON string of selected fields
+  expiresAt     DateTime?
+  createdAt     DateTime   @default(now())
+  viewCount     Int        @default(0)
+  lastViewedAt  DateTime?
+
+  @@index([token])
+  @@index([credentialId])
+  @@map("shared_credential")
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // upload, share, view
+  description String
+  documentId  String?
+  documentName String?
+  metadata    String?  // JSON string for additional data
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("activity")
+}

@@ -93,16 +93,47 @@ export default function UploadDocumentPage() {
 
     setUploading(true);
 
-    // Simulate upload process (will be replaced with actual IPFS upload)
-    setTimeout(() => {
+    try {
+      // Prepare form data
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('documentName', documentName);
+      formData.append('documentType', documentType);
+      if (issuerName) formData.append('issuerName', issuerName);
+      if (issueDate) formData.append('issueDate', issueDate);
+
+      // Get auth token from localStorage (Privy stores it there)
+      const token = localStorage.getItem('privy:token');
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      // Call upload API
+      const response = await fetch('/api/documents/upload', {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setUploading(false);
+        setUploadSuccess(true);
+        
+        // Redirect to wallet after 2 seconds
+        setTimeout(() => {
+          router.push("/wallet");
+        }, 2000);
+      } else {
+        throw new Error(result.error || 'Upload failed');
+      }
+    } catch (error: any) {
+      console.error('Upload error:', error);
       setUploading(false);
-      setUploadSuccess(true);
-      
-      // Redirect to wallet after 2 seconds
-      setTimeout(() => {
-        router.push("/wallet");
-      }, 2000);
-    }, 3000);
+      alert(`Upload failed: ${error.message}`);
+    }
   };
 
   if (uploadSuccess) {
@@ -141,7 +172,7 @@ export default function UploadDocumentPage() {
                 <Button variant="ghost" onClick={() => router.push("/wallet")}>
                   Wallet
                 </Button>
-                <Button variant="ghost" onClick={() => router.push("/verify")}>
+                <Button variant="ghost" onClick={() => router.push("/user-verify")}>
                   Verify
                 </Button>
               </div>

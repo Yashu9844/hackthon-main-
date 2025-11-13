@@ -10,8 +10,11 @@ interface Config {
   JWT_SECRET: string;
   FRONTEND_URL: string;
   NODE_ENV: string;
-  PRIVY_APP_ID: string;
-  PRIVY_APP_SECRET: string;
+  // PRIVY_APP_ID: string;
+  // PRIVY_APP_SECRET: string;
+  PINATA_API_KEY: string;
+  PINATA_API_SECRET: string;
+  PINATA_JWT: string;
 }
 
 const env: Config = {
@@ -22,8 +25,11 @@ const env: Config = {
   JWT_SECRET: process.env.JWT_SECRET as string,
   FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:3000",
   NODE_ENV: process.env.NODE_ENV || "development",
-  PRIVY_APP_ID: process.env.PRIVY_APP_ID as string,
-  PRIVY_APP_SECRET: process.env.PRIVY_APP_SECRET as string,
+  // PRIVY_APP_ID: process.env.PRIVY_APP_ID as string,
+  // PRIVY_APP_SECRET: process.env.PRIVY_APP_SECRET as string,
+  PINATA_API_KEY: process.env.PINATA_API_KEY as string,
+  PINATA_API_SECRET: process.env.PINATA_API_SECRET as string,
+  PINATA_JWT: process.env.PINATA_JWT as string,
 };
 
 export default env;
