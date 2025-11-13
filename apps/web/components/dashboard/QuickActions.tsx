@@ -37,7 +37,7 @@ export function QuickActions() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Link href="/verify">
+          <Link href="/user-verify">
             <Button variant="outline" className="w-full">
               <Search className="mr-2 h-4 w-4" />
               Start Verification
