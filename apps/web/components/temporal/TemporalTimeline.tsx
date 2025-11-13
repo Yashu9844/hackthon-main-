@@ -95,8 +95,23 @@ export function TemporalTimeline({ credentialId }: TemporalTimelineProps) {
     );
   }
 
-  if (!status) {
-    return <div className="text-red-500">Failed to load temporal status</div>;
+  if (!status || !status.timeline || status.timeline.length === 0) {
+    return (
+      <div className="rounded-lg bg-white p-8 shadow-xl dark:bg-gray-800 text-center">
+        <svg className="mx-auto h-12 w-12 text-yellow-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          No Temporal Commitments Found
+        </h3>
+        <p className="text-gray-600 dark:text-gray-400 mb-4">
+          This credential was created before the temporal commitment feature was enabled.
+        </p>
+        <p className="text-sm text-gray-500 dark:text-gray-500">
+          Only credentials issued after the temporal feature will have time-locked commitments.
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -185,7 +200,7 @@ export function TemporalTimeline({ credentialId }: TemporalTimelineProps) {
       {/* Timeline */}
       <div className="space-y-4">
         {status.timeline.map((item: TemporalStatus, index: number) => (
-          <div key={item.epoch} className="relative">
+          <div key={`temporal-${credentialId}-${item.epoch}-${index}`} className="relative">
             {/* Connection Line */}
             {index < status.timeline.length - 1 && (
               <div className="absolute left-8 top-16 bottom-0 w-0.5 bg-gray-300 dark:bg-gray-600" />
